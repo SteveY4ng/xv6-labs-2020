@@ -6,7 +6,7 @@
 
 char buf[1024];
 int match(char*, char*);
-
+// 对文件描述符fd所指向的文件进行pattern的匹配
 void
 grep(char *pattern, int fd)
 {
@@ -14,10 +14,12 @@ grep(char *pattern, int fd)
   char *p, *q;
 
   m = 0;
+  // 从buf+m的位置开始读取字节流
   while((n = read(fd, buf+m, sizeof(buf)-m-1)) > 0){
     m += n;
     buf[m] = '\0';
     p = buf;
+    // char* strchr(char* str, int c) 返回在字符串str中第一次出现字符c的位置
     while((q = strchr(p, '\n')) != 0){
       *q = 0;
       if(match(pattern, p)){
@@ -40,8 +42,8 @@ main(int argc, char *argv[])
   char *pattern;
 
   if(argc <= 1){
-    fprintf(2, "usage: grep pattern [file ...]\n");
-    exit(1);
+    fprintf(2, "usage: grep pattern [file ...]\n"); // 向标准错误输出错误信息
+    exit(1); // exit系统调用正常退出时，参数为0，异常退出时，参数为1
   }
   pattern = argv[1];
 

@@ -79,7 +79,7 @@ runcmd(struct cmd *cmd)
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
-  case REDIR:
+  case REDIR://重定向，fork创建子进程，重新打开对应的文件描述符，执行exec
     rcmd = (struct redircmd*)cmd;
     close(rcmd->fd);
     if(open(rcmd->file, rcmd->mode) < 0){
@@ -148,6 +148,7 @@ main(void)
   int fd;
 
   // Ensure that three file descriptors are open.
+  // shell 用户程序确保有3个文件描述符一直打开
   while((fd = open("console", O_RDWR)) >= 0){
     if(fd >= 3){
       close(fd);

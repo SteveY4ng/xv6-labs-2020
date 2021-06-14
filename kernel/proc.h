@@ -82,13 +82,13 @@ struct trapframe {
 
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-// Per-process state
+// Per-process state 内核内为每个进程都维护了一个状态信息（其中，进程状态，页表，内核栈是最重要的状态信息）
 struct proc {
   struct spinlock lock;
 
   // p->lock must be held when using these:
-  enum procstate state;        // Process state
-  struct proc *parent;         // Parent process
+  enum procstate state;        // Process state 进程状态
+  struct proc *parent;         // Parent process 父进程
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
