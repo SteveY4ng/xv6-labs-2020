@@ -297,6 +297,8 @@ fork(void)
 
   release(&np->lock);
 
+  np->trace_mask = p->trace_mask;
+
   return pid;
 }
 
@@ -692,4 +694,18 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int procnum(void)
+{
+  struct proc *p;
+  int num = 0;
+  for(p = proc; p <&proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state != UNUSED){
+      num++;
+    }
+    release(&p->lock);
+  }
+  return num;
 }
