@@ -25,7 +25,7 @@ struct cpu {
   int noff;                   // Depth of push_off() nesting.
   int intena;                 // Were interrupts enabled before push_off()?
 };
-
+// This function is defined in other places and used here
 extern struct cpu cpus[NCPU];
 
 // per-process data for the trap handling code in trampoline.S.

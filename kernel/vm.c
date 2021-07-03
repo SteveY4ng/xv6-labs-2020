@@ -18,6 +18,7 @@ extern char trampoline[]; // trampoline.S
 /*
  * create a direct-map page table for the kernel.
  */
+// 创建内核页表，在xv6开启页表机制之前
 void
 kvminit()
 {
@@ -25,8 +26,10 @@ kvminit()
   memset(kernel_pagetable, 0, PGSIZE);
 
   // uart registers
+  // 通用串行数据总线
+  // io 设备在内核页表中直接映射，拥有读写权限
   kvmmap(UART0, UART0, PGSIZE, PTE_R | PTE_W);
-
+  // 虚拟机io协议，mmio，内存映射io来访问io，通过访问内存来访问io，还有一种通过in out指令来访问io
   // virtio mmio disk interface
   kvmmap(VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
@@ -53,6 +56,7 @@ void
 kvminithart()
 {
   w_satp(MAKE_SATP(kernel_pagetable));
+  // 如果不加参数，sfence_vma会刷新整个TLB
   sfence_vma();
 }
 
@@ -75,16 +79,22 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
+    // PX找到对应地址在对应页表的索引
+    // 通过索引对应的页表，得到页表项
     pte_t *pte = &pagetable[PX(level, va)];
-    if(*pte & PTE_V) {
+    if(*pte & PTE_V) { // 判断此页表项是否有效
+      // 如果有效，将页表项转换成物理地址，获取下一级页表项
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
+      // 如果alloc为0表示不允许分配对应子页表
+      // 或者alloc允许分配，但是分配失败
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
       memset(pagetable, 0, PGSIZE);
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
+  // 找到最终的页表项
   return &pagetable[PX(0, va)];
 }
 
@@ -151,13 +161,16 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   uint64 a, last;
   pte_t *pte;
 
+  // 使va页表对齐
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
+    // 获取对应的页表项
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
     if(*pte & PTE_V)
       panic("remap");
+    // 为页表项赋值
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
@@ -170,6 +183,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
+// 在对应进程的页表中删除va到va+npages的映射关系
 void
 uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {

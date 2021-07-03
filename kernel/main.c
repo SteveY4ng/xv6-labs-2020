@@ -28,6 +28,7 @@ main()
     iinit();         // inode cache
     fileinit();      // file table
     virtio_disk_init(); // emulated hard disk
+    // 通过userinit创建第一个进程
     userinit();      // first user process
     __sync_synchronize();
     started = 1;
