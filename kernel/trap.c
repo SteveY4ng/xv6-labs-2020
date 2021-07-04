@@ -9,6 +9,7 @@
 struct spinlock tickslock;
 uint ticks;
 
+extern pagetable_t kernel_pagetable;
 extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
@@ -146,6 +147,10 @@ kerneltrap()
   if((which_dev = devintr()) == 0){
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
+    printf("root(%d) next(%d) next(%d)\n", PX(2, r_sepc()), PX(1, r_sepc()), PX(0, r_sepc()));
+    // struct proc *p = myproc();
+    // vmprint(p->k_pagetable);
+    // vmprint(kernel_pagetable);
     panic("kerneltrap");
   }
 
