@@ -30,9 +30,11 @@ int
 copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   struct proc *p = myproc();
-
+  // printf("srcva: %p, dst: %p\n",srcva, dst);
+  // vmprint(p->k_pagetable);
   if (srcva >= p->sz || srcva+len >= p->sz || srcva+len < srcva)
     return -1;
+  printf("I'm in copyin new\n");
   memmove((void *) dst, (void *)srcva, len);
   stats.ncopyin++;   // XXX lock
   return 0;

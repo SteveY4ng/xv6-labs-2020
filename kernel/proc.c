@@ -258,7 +258,7 @@ void userinit(void)
 
   // allocate one user page and copy init's instructions
   // and data into it.
-  uvminit(p->pagetable, initcode, sizeof(initcode));
+  uvminit(p->pagetable, p->k_pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
@@ -281,16 +281,18 @@ int growproc(int n)
   struct proc *p = myproc();
 
   sz = p->sz;
+  if( (sz+n) > PLIC )
+    return -1;
   if (n > 0)
   {
-    if ((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0)
+    if ((sz = uvmalloc(p->pagetable,p->k_pagetable, sz, sz + n)) == 0)
     {
       return -1;
     }
   }
   else if (n < 0)
   {
-    sz = uvmdealloc(p->pagetable, sz, sz + n);
+    sz = uvmdealloc(p->pagetable, p->k_pagetable, sz, sz + n);
   }
   p->sz = sz;
   return 0;
@@ -311,7 +313,7 @@ int fork(void)
   }
 
   // Copy user memory from parent to child.
-  if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0)
+  if (uvmcopy(p->pagetable, np->pagetable, np->k_pagetable, p->sz) < 0)
   {
     freeproc(np);
     release(&np->lock);
@@ -526,10 +528,12 @@ void scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        // 切换新的进程后更新其satp寄存器
         w_satp(MAKE_SATP(p->k_pagetable));
         sfence_vma();
         swtch(&c->context, &p->context);
-
+        // 回到scheduler后要用内核页表？
+         kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
@@ -541,9 +545,8 @@ void scheduler(void)
 #if !defined(LAB_FS)
     if (found == 0)
     {
-      
+     
       intr_on();
-      kvminithart();
       asm volatile("wfi");
     }
 #else
