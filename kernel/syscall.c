@@ -14,7 +14,7 @@ fetchaddr(uint64 addr, uint64 *ip)
   struct proc *p = myproc();
   if(addr >= p->sz || addr+sizeof(uint64) > p->sz)
     return -1;
-  printf("I'm in fetchaddr\n");
+  // printf("I'm in fetchaddr\n");
   if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
     return -1;
   return 0;
@@ -136,8 +136,8 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  printf("root page table address: %p\n", p->k_pagetable);
-  printf("satp: %p\n", r_satp() );
+  // printf("root page table address: %p\n", p->k_pagetable);
+  // printf("satp: %p\n", r_satp() );
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();

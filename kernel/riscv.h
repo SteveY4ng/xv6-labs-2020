@@ -323,6 +323,9 @@ sfence_vma()
 #define PGSIZE 4096 // bytes per page
 #define PGSHIFT 12  // bits of offset within a page
 
+// 对于4K对齐的地址，PGROUNDUP、PGROUNDDOWN均返回当前地址所在页的首地址
+// 对于非4K对齐的地址，PGROUNDUP返回当前地址的下一个page的首地址
+// PGROUNDDOWN返回当前地址所在页的首地址
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
 

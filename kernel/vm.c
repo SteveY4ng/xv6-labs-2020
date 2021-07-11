@@ -54,33 +54,68 @@ pagetable_t kvminit_proc()
   memset(k_pagetable, 0, PGSIZE);
 
   // uart registers
-  if (mappages(k_pagetable, UART0, PGSIZE, UART0, PTE_R | PTE_W) != 0)
+  if (mappages(k_pagetable, UART0, PGSIZE, UART0, PTE_R | PTE_W) != 0) {
+    freewalk(k_pagetable);
     return 0;
+  }
+    
 
   // virtio mmio disk interface
-  if (mappages(k_pagetable, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) != 0)
+  if (mappages(k_pagetable, VIRTIO0, PGSIZE, VIRTIO0, PTE_R | PTE_W) != 0) {
+    uvmunmap(k_pagetable, UART0, 1, 0);
+    freewalk(k_pagetable);
     return 0;
+  }
+    
 
   // CLINT
-  if (mappages(k_pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) != 0)
-    return 0;
+  // if (mappages(k_pagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W) != 0)
+  //   return 0;
 
   // PLIC
-  if (mappages(k_pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) != 0)
+  if (mappages(k_pagetable, PLIC, 0x400000, PLIC, PTE_R | PTE_W) != 0) 
+  {
+    uvmunmap(k_pagetable, UART0, 1, 0);
+    uvmunmap(k_pagetable,VIRTIO0, 1, 0);
+    freewalk(k_pagetable);
     return 0;
+  }
+    
 
   // map kernel text executable and read-only.
   if (mappages(k_pagetable, KERNBASE, (uint64)etext - KERNBASE, KERNBASE, PTE_R | PTE_X) != 0)
+  {
+    uvmunmap(k_pagetable, UART0, 1, 0);
+    uvmunmap(k_pagetable,VIRTIO0, 1, 0);
+    uvmunmap(k_pagetable,PLIC,0x400000/PGSIZE, 0);
+    freewalk(k_pagetable);
     return 0;
+  }
+    
 
   // map kernel data and the physical RAM we'll make use of.
   if (mappages(k_pagetable, (uint64)etext, PHYSTOP - (uint64)etext, (uint64)etext, PTE_R | PTE_W) != 0)
+  {
+    uvmunmap(k_pagetable, UART0, 1, 0);
+    uvmunmap(k_pagetable,VIRTIO0, 1, 0);
+    uvmunmap(k_pagetable,PLIC,0x400000/PGSIZE, 0);
+    uvmunmap(k_pagetable, KERNBASE, ((uint64)etext - KERNBASE)/PGSIZE, 0 );
+    freewalk(k_pagetable);
     return 0;
+  }
+    
 
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  if (mappages(k_pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0)
+  if (mappages(k_pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0){
+       uvmunmap(k_pagetable, UART0, 1, 0);
+    uvmunmap(k_pagetable,VIRTIO0, 1, 0);
+    uvmunmap(k_pagetable,PLIC,0x400000/PGSIZE, 0);
+    uvmunmap(k_pagetable, KERNBASE, ((uint64)etext - KERNBASE)/PGSIZE, 0 );
+    uvmunmap(k_pagetable,(uint64)etext, (PHYSTOP - (uint64)etext)/PGSIZE, 0);
+    freewalk(k_pagetable);
     return 0;
+  }
 
   return k_pagetable;
 }
@@ -191,14 +226,19 @@ int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   pte_t *pte;
 
   a = PGROUNDDOWN(va);
+  uint64 a1 = a;
   last = PGROUNDDOWN(va + size - 1);
   for (;;)
   {
-    if ((pte = walk(pagetable, a, 1)) == 0)
+    if ((pte = walk(pagetable, a, 1)) == 0) {
+      uvmunmap(pagetable, a1, (a - a1)/PGSIZE, 0);
       return -1;
+    }
+      
     if (*pte & PTE_V)
     {
       // vmprint(pagetable);
+
       panic("remap");
     }
       
@@ -399,6 +439,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, pagetable_t kpagetable, uint64 sz)
 
 err:
   uvmunmap(new, 0, i / PGSIZE, 1);
+  uvmunmap(kpagetable, 0, i/PGSIZE, 0);
   return -1;
 }
 
@@ -472,48 +513,51 @@ int copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 // Return 0 on success, -1 on error.
 int copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
-  uint64 n, va0, pa0;
-  int got_null = 0;
+  return copyinstr_new(pagetable, dst, srcva,  max);
+  // uint64 n, va0, pa0;
+  // int got_null = 0;
 
-  while (got_null == 0 && max > 0)
-  {
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if (pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if (n > max)
-      n = max;
+  // while (got_null == 0 && max > 0)
+  // {
+  //   // Return the virtual address of page which srcva in
+  //   va0 = PGROUNDDOWN(srcva);
+  //   // Get the physical address of the virtual address
+  //   pa0 = walkaddr(pagetable, va0);
+  //   if (pa0 == 0)
+  //     return -1;
+  //   n = PGSIZE - (srcva - va0);
+  //   if (n > max)
+  //     n = max;
 
-    char *p = (char *)(pa0 + (srcva - va0));
-    while (n > 0)
-    {
-      if (*p == '\0')
-      {
-        *dst = '\0';
-        got_null = 1;
-        break;
-      }
-      else
-      {
-        *dst = *p;
-      }
-      --n;
-      --max;
-      p++;
-      dst++;
-    }
+  //   char *p = (char *)(pa0 + (srcva - va0));
+  //   while (n > 0)
+  //   {
+  //     if (*p == '\0')
+  //     {
+  //       *dst = '\0';
+  //       got_null = 1;
+  //       break;
+  //     }
+  //     else
+  //     {
+  //       *dst = *p;
+  //     }
+  //     --n;
+  //     --max;
+  //     p++;
+  //     dst++;
+  //   }
 
-    srcva = va0 + PGSIZE;
-  }
-  if (got_null)
-  {
-    return 0;
-  }
-  else
-  {
-    return -1;
-  }
+  //   srcva = va0 + PGSIZE;
+  // }
+  // if (got_null)
+  // {
+  //   return 0;
+  // }
+  // else
+  // {
+  //   return -1;
+  // }
 }
 
 // 打印valid的页表项

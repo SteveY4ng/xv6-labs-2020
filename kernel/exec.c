@@ -18,6 +18,7 @@ int exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pagetable_t pagetable = 0, oldpagetable;
+  pagetable_t kpagetable = 0, oldkpagetable;
   struct proc *p = myproc();
 
   begin_op();
@@ -34,10 +35,20 @@ int exec(char *path, char **argv)
     goto bad;
   if (elf.magic != ELF_MAGIC)
     goto bad;
-
+  printf("1\n");
   if ((pagetable = proc_pagetable(p)) == 0)
     goto bad;
-
+  // Create a new user kernel pagetable
+  printf("2\n");
+  if ((kpagetable = kvminit_proc()) == 0)
+    goto bad;
+  printf("3\n");
+  // Map the user kernel stack
+  uint64 va = p->kstack;
+  uint64 pa = kvmpa(va);
+  if (mappages(kpagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) != 0)
+    goto bad;
+  printf("4\n");
   // Load program into memory.
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph))
   {
@@ -50,20 +61,16 @@ int exec(char *path, char **argv)
     if (ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     uint64 sz1;
-    if (strncmp(path, "/init", 5) == 0)
-    {
-      if ((sz1 = uvmalloc(pagetable, 0, sz, ph.vaddr + ph.memsz)) == 0)
-        goto bad;
-    }
-    else
-    {
-      if ((sz1 = uvmalloc(pagetable, p->k_pagetable, sz, ph.vaddr + ph.memsz)) == 0)
-        goto bad;
-    }
+
+    if(ph.vaddr + ph.memsz  >= PLIC)
+      goto bad;
+
+    if ((sz1 = uvmalloc(pagetable, kpagetable, sz, ph.vaddr + ph.memsz)) == 0)
+      goto bad;
 
     sz = sz1;
-    if (sz >= PLIC)
-      goto bad;
+    // if (sz >= PLIC)
+    //   goto bad;
     if (ph.vaddr % PGSIZE != 0)
       goto bad;
     if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
@@ -80,12 +87,13 @@ int exec(char *path, char **argv)
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
-  if ((sz1 = uvmalloc(pagetable, p->k_pagetable, sz, sz + 2 * PGSIZE)) == 0)
+  if ((sz1 = uvmalloc(pagetable, kpagetable, sz, sz + 2 * PGSIZE)) == 0)
     goto bad;
   sz = sz1;
   if (sz > PLIC)
     goto bad;
   uvmclear(pagetable, sz - 2 * PGSIZE);
+  uvmclear(kpagetable, sz - 2 * PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
 
@@ -126,10 +134,16 @@ int exec(char *path, char **argv)
   // Commit to the user image.
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
+  oldkpagetable = p->k_pagetable;
+  p->k_pagetable = kpagetable;
+  // Update current user kernel pagetable
+  w_satp(MAKE_SATP(p->k_pagetable));
+  sfence_vma();
   p->sz = sz;
   p->trapframe->epc = elf.entry; // initial program counter = main
   p->trapframe->sp = sp;         // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
+  proc_freekpagetable(oldkpagetable, p, oldsz);
 
   if (p->pid == 1)
   {
@@ -139,12 +153,17 @@ int exec(char *path, char **argv)
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
 bad:
+  printf("baddddd\n");
   if (pagetable)
   {
     proc_freepagetable(pagetable, sz);
   }
 
-  uvmunmap(p->k_pagetable, 0, PGROUNDUP(sz) / sz, 0);
+  if (kpagetable)
+  {
+    proc_freekpagetable(kpagetable, p, sz);
+  }
+  // uvmunmap(p->k_pagetable, 0, PGROUNDUP(sz) / sz, 0);
   if (ip)
   {
     iunlockput(ip);

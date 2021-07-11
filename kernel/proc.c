@@ -137,7 +137,7 @@ found:
     return 0;
   }
 
-  uint64 va = KSTACK((int)(p - proc));
+  uint64 va = p->kstack;
   uint64 pa = kvmpa(va);
   if (mappages(p->k_pagetable, va, PGSIZE, (uint64)pa, PTE_R | PTE_W) != 0)
   {
@@ -168,7 +168,7 @@ freeproc(struct proc *p)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
   if (p->k_pagetable)
-    proc_freekpagetable(p->k_pagetable, p);
+    proc_freekpagetable(p->k_pagetable, p, p->sz);
   p->k_pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -225,15 +225,17 @@ void proc_freepagetable(pagetable_t pagetable, uint64 sz)
 }
 
 // 释放每个进程的kernel pagetable
-void proc_freekpagetable(pagetable_t kpagetable, struct proc *p)
+void proc_freekpagetable(pagetable_t kpagetable, struct proc *p, uint64 sz)
 {
   uvmunmap(kpagetable, UART0, 1, 0);
   uvmunmap(kpagetable, VIRTIO0, 1, 0);
-  uvmunmap(kpagetable, CLINT, PGROUNDUP(0x10000) / PGSIZE, 0);
+  // uvmunmap(kpagetable, CLINT, PGROUNDUP(0x10000) / PGSIZE, 0);
   uvmunmap(kpagetable, PLIC, PGROUNDUP(0x400000) / PGSIZE, 0);
   uvmunmap(kpagetable, KERNBASE, PGROUNDUP(PHYSTOP - KERNBASE) / PGSIZE, 0);
   uvmunmap(kpagetable, TRAMPOLINE, 1, 0);
   uvmunmap(kpagetable, (uint64)(KSTACK((int)(p - proc))), 1, 0);
+  if(sz > 0) 
+    uvmunmap(kpagetable, 0, PGROUNDUP(sz) / PGSIZE, 0);
   freewalk(kpagetable);
 }
 

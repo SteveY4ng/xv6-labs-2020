@@ -2501,6 +2501,7 @@ execout(char *s)
       printf("fork failed\n");
       exit(1);
     } else if(pid == 0){
+      printf("allocate mem\n");
       // allocate all of memory.
       while(1){
         uint64 a = (uint64) sbrk(4096);
@@ -2509,14 +2510,18 @@ execout(char *s)
         *(char*)(a + 4096 - 1) = 1;
       }
 
+      printf("free a few mem\n");
       // free a few pages, in order to let exec() make some
       // progress.
       for(int i = 0; i < avail; i++)
         sbrk(-4096);
-      
+      printf("close eee\n");
       close(1);
+      printf("close not return\n");
       char *args[] = { "echo", "x", 0 };
+      printf("execccc\n");
       exec("echo", args);
+      printf("???\n");
       exit(0);
     } else {
       wait((int*)0);
@@ -2553,7 +2558,9 @@ countfree()
     close(fds[0]);
     
     while(1){
+      // printf("sbrk once\n");
       uint64 a = (uint64) sbrk(4096);
+      // printf("sss\n");
       if(a == 0xffffffffffffffff){
         break;
       }
@@ -2724,6 +2731,7 @@ main(int argc, char *argv[])
 
   printf("usertests starting\n");
   int free0 = countfree();
+  printf("count free finish\n");
   int free1 = 0;
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {

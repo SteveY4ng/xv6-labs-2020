@@ -92,7 +92,7 @@ int             fork(void);
 int             growproc(int);
 pagetable_t     proc_pagetable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
-void            proc_freekpagetable(pagetable_t, struct proc *);
+void            proc_freekpagetable(pagetable_t, struct proc *, uint64);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -186,6 +186,8 @@ void            vmprint(pagetable_t pagetable);
 // vncopyin.c
 int
 copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len);
+int
+copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max);
 
 // plic.c
 void            plicinit(void);
