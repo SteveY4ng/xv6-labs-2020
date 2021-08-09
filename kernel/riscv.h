@@ -160,6 +160,7 @@ w_mideleg(uint64 x)
 
 // Supervisor Trap-Vector Base Address
 // low two bits are mode.
+// The kernel writes the address of its trap handler here, the RISC-V jumps here to handle a trap 
 static inline void 
 w_stvec(uint64 x)
 {

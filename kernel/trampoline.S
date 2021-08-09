@@ -93,6 +93,7 @@ userret:
         # a1: user page table, for satp.
 
         # switch to the user page table.
+        # write register a1's value to satp
         csrw satp, a1
         sfence.vma zero, zero
 
