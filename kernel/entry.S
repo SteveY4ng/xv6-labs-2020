@@ -4,7 +4,7 @@
         # be placed at 0x80000000.
 .section .text
 _entry:
-	# set up a stack for C.
+	# set up a stack for C. 设置一个栈，从而可以运行c程序
         # stack0 is declared in start.c,
         # with a 4096-byte stack per CPU.
         # sp = stack0 + (hartid * 4096)

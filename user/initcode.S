@@ -2,7 +2,7 @@
 # This code runs in user space.
 
 #include "syscall.h"
-
+# 将参数放在寄存器a0和寄存器a1中，将系统调用号存放在寄存器a7中，ecall指令陷入内核
 # exec(init, argv)
 .globl start
 start:

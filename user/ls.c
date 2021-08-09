@@ -29,14 +29,16 @@ ls(char *path)
   int fd;
   struct dirent de;
   struct stat st;
-
+  // open获取path对应文件的文件描述符，当返回值为-1时表明发生异常
   if((fd = open(path, 0)) < 0){
     fprintf(2, "ls: cannot open %s\n", path);
     return;
   }
-
+  // fstat(int fd, struct stat *st)
+  // fstate从文件描述符所指向的inode检索信息，将fd文件描述符所关联文件的信息放入st中，返回-1，表明发生错误
   if(fstat(fd, &st) < 0){
     fprintf(2, "ls: cannot stat %s\n", path);
+    // 打开的文件描述符在程序退出时一定要关掉？
     close(fd);
     return;
   }

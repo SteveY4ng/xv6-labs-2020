@@ -25,6 +25,7 @@ int sleep(int);
 int uptime(void);
 
 // ulib.c
+// xv6 提供的库函数
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
 void *memmove(void*, const void*, int);
