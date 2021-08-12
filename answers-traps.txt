@@ -1,0 +1,6 @@
+1. Registers a0-an contain arguments to functions. In main's call to printf, register a2 holds 13.
+2. The compile inline functions f and g in main.
+3. The function printf located in 0x00000630
+4. The value in register ra is 0x00000030
+5. The output is "HE110 World", 0x726c6400. We do not need to change 57616 to a different value.
+6. A random number.  

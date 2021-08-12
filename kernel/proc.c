@@ -126,6 +126,10 @@ found:
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
+  p->passed_ticks = 0;
+  p->alarm_interval = 0;
+  p->alarm_handler = 0;
+  p->alarmframe = 0;
 
   return p;
 }
