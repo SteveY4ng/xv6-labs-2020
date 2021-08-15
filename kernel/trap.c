@@ -73,25 +73,40 @@ void usertrap(void)
     uint64 scause = r_scause();
     if (scause == 13 || scause == 15)
     {
-      printf("pagefault exception.\n");
+      // printf("pagefault exception.\n");
       // page fault exception
-      uint64 page_addr = PGROUNDDOWN(r_stval());
-      char *mem = kalloc();
-      if (mem == 0)
-      {
-        printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-        printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      uint64 stval = r_stval();
+      if(lazy_alloc(stval)<0){
         p->killed = 1;
       }
-      else
-      {
-        memset(mem, 0, PGSIZE);
-        if (mappages(p->pagetable, page_addr, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0)
-        {
-          kfree(mem);
-          p->killed = 1;
-        }
-      }
+      // if (stval >= p->sz)
+      // {
+      //   printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+      //   printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      //   p->killed = 1;
+      // } else if(stval < p->trapframe->sp){
+      //     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+      //   printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      //   p->killed = 1;
+      // }
+      // else
+      // {
+      //   uint64 page_addr = PGROUNDDOWN(stval);
+      //   char *mem = kalloc();
+      //   if (mem == 0)
+      //   {
+      //     p->killed = 1;
+      //   }
+      //   else
+      //   {
+      //     memset(mem, 0, PGSIZE);
+      //     if (mappages(p->pagetable, page_addr, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0)
+      //     {
+      //       kfree(mem);
+      //       p->killed = 1;
+      //     }
+      //   }
+      // }
     }
     else
     {
@@ -159,6 +174,7 @@ void usertrapret(void)
 // on whatever the current kernel stack is.
 void kerneltrap()
 {
+  // printf("kerneltrap\n");
   int which_dev = 0;
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
