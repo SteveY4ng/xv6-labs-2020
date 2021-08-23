@@ -177,7 +177,7 @@ int
 devintr()
 {
   uint64 scause = r_scause();
-
+  // the interrupt bit in the scause register is set if the trap was caused by an interrupt
   if((scause & 0x8000000000000000L) &&
      (scause & 0xff) == 9){
     // this is a supervisor external interrupt, via PLIC.

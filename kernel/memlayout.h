@@ -26,8 +26,11 @@
 #define VIRTIO0_IRQ 1
 
 // local interrupt controller, which contains the timer.
+// CLINT(Core Local Interrptor) is the base memory map address for Core locol interrupt 
 #define CLINT 0x2000000L
+// A timer interrupt is pending whenever mtime is greater than or equal to the value in MTIMECMP register
 #define CLINT_MTIMECMP(hartid) (CLINT + 0x4000 + 8*(hartid))
+// MTIME is a register that contains the number of cycles counted from boot
 #define CLINT_MTIME (CLINT + 0xBFF8) // cycles since boot.
 
 // qemu puts programmable interrupt controller here.

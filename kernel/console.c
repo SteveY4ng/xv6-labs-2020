@@ -184,7 +184,7 @@ void
 consoleinit(void)
 {
   initlock(&cons.lock, "cons");
-
+  // initialize uart
   uartinit();
 
   // connect read and write system calls

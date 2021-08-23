@@ -56,16 +56,21 @@ uartinit(void)
   WriteReg(IER, 0x00);
 
   // special mode to set baud rate.
+  // bit 7 is divisor latch enable
   WriteReg(LCR, LCR_BAUD_LATCH);
 
   // LSB for baud rate of 38.4K.
+  // when divisor latch is enabled, reg 0 is the LSB of the divisor
+  // now baud rate is 38.4K
   WriteReg(0, 0x03);
 
   // MSB for baud rate of 38.4K.
+  // when divisor latch is enabled, reg 1 is the MSB of the divisor
   WriteReg(1, 0x00);
 
   // leave set-baud mode,
   // and set word length to 8 bits, no parity.
+  // the length of word to be transmitted or received 
   WriteReg(LCR, LCR_EIGHT_BITS);
 
   // reset and enable FIFOs.

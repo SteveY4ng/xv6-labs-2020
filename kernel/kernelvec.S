@@ -96,6 +96,8 @@ timervec:
         # scratch[32] : address of CLINT's MTIMECMP register.
         # scratch[40] : desired interval between interrupts.
         
+        # notice that timervec only stores four registers(a0, a1, a2, a3)
+        # because it only uses four registers 
         csrrw a0, mscratch, a0
         sd a1, 0(a0)
         sd a2, 8(a0)
@@ -105,11 +107,13 @@ timervec:
         # by adding interval to mtimecmp.
         ld a1, 32(a0) # CLINT_MTIMECMP(hart)
         ld a2, 40(a0) # interval
-        ld a3, 0(a1)
-        add a3, a3, a2
-        sd a3, 0(a1)
+        ld a3, 0(a1) # the value in register mtimecmp
+        add a3, a3, a2 # add interval to mtimecmp
+        sd a3, 0(a1) # store to mtimecmp
 
         # raise a supervisor software interrupt.
+        # write 10b to sip(containing information on pending interrupts) to raise a supervisor software interrupt. 
+        # bit 2 is the pending software interrupt bit
 	li a1, 2
         csrw sip, a1
 
