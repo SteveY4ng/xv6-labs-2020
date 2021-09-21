@@ -137,7 +137,8 @@ static void
 freeproc(struct proc *p)
 {
   if(p->trapframe)
-    kfree((void*)p->trapframe);
+    // kfree((void*)p->trapframe);
+    decrement((uint64)p->trapframe);
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -260,6 +261,7 @@ fork(void)
 {
   int i, pid;
   struct proc *np;
+  // 返回当前进程
   struct proc *p = myproc();
 
   // Allocate process.
@@ -386,7 +388,7 @@ exit(int status)
   p->state = ZOMBIE;
 
   release(&original_parent->lock);
-
+  // printf("scheduler\n");
   // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
@@ -400,7 +402,7 @@ wait(uint64 addr)
   struct proc *np;
   int havekids, pid;
   struct proc *p = myproc();
-
+ 
   // hold p->lock for the whole time to avoid lost
   // wakeups from a child's exit().
   acquire(&p->lock);
@@ -413,11 +415,13 @@ wait(uint64 addr)
       // acquiring the lock first would cause a deadlock,
       // since np might be an ancestor, and we already hold p->lock.
       if(np->parent == p){
+
         // np->parent can't change between the check and the acquire()
         // because only the parent changes it, and we're the parent.
         acquire(&np->lock);
         havekids = 1;
         if(np->state == ZOMBIE){
+   
           // Found one.
           pid = np->pid;
           if(addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
@@ -429,12 +433,12 @@ wait(uint64 addr)
           freeproc(np);
           release(&np->lock);
           release(&p->lock);
+    
           return pid;
         }
         release(&np->lock);
       }
     }
-
     // No point waiting if we don't have any children.
     if(!havekids || p->killed){
       release(&p->lock);
@@ -463,7 +467,6 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-    
     int nproc = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -512,7 +515,6 @@ sched(void)
     panic("sched running");
   if(intr_get())
     panic("sched interruptible");
-
   intena = mycpu()->intena;
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;

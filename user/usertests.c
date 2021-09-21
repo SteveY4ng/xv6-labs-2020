@@ -2524,12 +2524,13 @@ void
 badarg(char *s)
 {
   for(int i = 0; i < 50000; i++){
+    // printf("hahaha%d\n",i);
     char *argv[2];
     argv[0] = (char*)0xffffffff;
     argv[1] = 0;
     exec("echo", argv);
   }
-  
+  printf("ahei\n");
   exit(0);
 }
 
@@ -2548,16 +2549,17 @@ execout(char *s)
       // allocate all of memory.
       while(1){
         uint64 a = (uint64) sbrk(4096);
+        // printf("1\n");
         if(a == 0xffffffffffffffffLL)
           break;
         *(char*)(a + 4096 - 1) = 1;
       }
-
+      // printf("abc\n");
       // free a few pages, in order to let exec() make some
       // progress.
-      for(int i = 0; i < avail; i++)
+      for(int i = 0; i <avail; i++)
         sbrk(-4096);
-      
+      // printf("def\n");
       close(1);
       char *args[] = { "echo", "x", 0 };
       exec("echo", args);

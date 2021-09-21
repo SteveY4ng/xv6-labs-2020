@@ -78,6 +78,7 @@ int
 argstr(int n, char *buf, int max)
 {
   uint64 addr;
+  // argaddr为获取第n个参数，且第n个参数为指针
   if(argaddr(n, &addr) < 0)
     return -1;
   return fetchstr(addr, buf, max);

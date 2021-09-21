@@ -428,6 +428,7 @@ sys_exec(void)
       goto bad;
     }
     if(fetchaddr(uargv+sizeof(uint64)*i, (uint64*)&uarg) < 0){
+      printf("dengdengdeng\n");
       goto bad;
     }
     if(uarg == 0){
@@ -437,20 +438,26 @@ sys_exec(void)
     argv[i] = kalloc();
     if(argv[i] == 0)
       goto bad;
-    if(fetchstr(uarg, argv[i], PGSIZE) < 0)
+    if(fetchstr(uarg, argv[i], PGSIZE) < 0){
       goto bad;
+    }
+      
   }
 
   int ret = exec(path, argv);
 
   for(i = 0; i < NELEM(argv) && argv[i] != 0; i++)
-    kfree(argv[i]);
+    // kfree(argv[i]);
+     decrement((uint64)argv[i]);
 
   return ret;
 
  bad:
-  for(i = 0; i < NELEM(argv) && argv[i] != 0; i++)
-    kfree(argv[i]);
+  for(i = 0; i < NELEM(argv) && argv[i] != 0; i++){
+  // kfree(argv[i]);
+  decrement((uint64)argv[i]);
+  }
+    
   return -1;
 }
 
